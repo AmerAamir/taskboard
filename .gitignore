@@ -1,0 +1,38 @@
+﻿# Dependencies
+node_modules/
+
+# Environment files with real secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+.vite/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime and cache files
+.cache/
+.tmp/
+temp/
+coverage/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local Docker and database files, if created later
+*.pid
+*.seed
+*.sqlite
+*.db
