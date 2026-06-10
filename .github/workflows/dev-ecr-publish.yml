@@ -1,0 +1,164 @@
+name: Dev ECR Publish
+
+on:
+  push:
+    branches:
+      - dev
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ca-central-1
+  AWS_ACCOUNT_ID: "631534401204"
+  BACKEND_ECR_REPOSITORY: taskboard-dev-backend
+  FRONTEND_ECR_REPOSITORY: taskboard-dev-frontend
+  COMPOSE_PROJECT_NAME: taskboard-dev-publish
+
+  BACKEND_LOCAL_IMAGE: taskboard-backend:ci
+  FRONTEND_LOCAL_IMAGE: taskboard-frontend:ci
+
+  VITE_API_URL: http://localhost:4000
+
+jobs:
+  build-test-and-publish:
+    name: Build, test, and publish dev images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show Docker versions
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Create safe CI environment file
+        run: |
+          cat > .env.compose <<'EOF'
+          NODE_ENV=test
+          PORT=4000
+          BACKEND_PORT=4000
+
+          POSTGRES_USER=taskboard
+          POSTGRES_PASSWORD=taskboard_ci_password
+          POSTGRES_DB=taskboard
+          POSTGRES_HOST=db
+          POSTGRES_PORT=5432
+
+          DATABASE_HOST=db
+          DATABASE_PORT=5432
+          DATABASE_USER=taskboard
+          DATABASE_PASSWORD=taskboard_ci_password
+          DATABASE_NAME=taskboard
+          DATABASE_URL=postgresql://taskboard:taskboard_ci_password@db:5432/taskboard
+
+          VITE_API_URL=http://localhost:4000
+          EOF
+
+      - name: Build backend Docker image
+        run: |
+          docker build \
+            -t "$BACKEND_LOCAL_IMAGE" \
+            ./backend
+
+      - name: Build frontend Docker image
+        run: |
+          docker build \
+            --build-arg VITE_API_URL="$VITE_API_URL" \
+            -t "$FRONTEND_LOCAL_IMAGE" \
+            ./frontend
+
+      - name: Start full stack with Docker Compose
+        run: |
+          docker compose \
+            -p "$COMPOSE_PROJECT_NAME" \
+            --env-file .env.compose \
+            up -d --build
+
+      - name: Wait for backend health endpoint
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:4000/health; then
+              echo "Backend health endpoint is ready."
+              exit 0
+            fi
+
+            echo "Waiting for backend health endpoint... attempt $i"
+            sleep 2
+          done
+
+          echo "Backend health endpoint did not become ready."
+          exit 1
+
+      - name: Check backend readiness endpoint
+        run: |
+          curl -fsS http://localhost:4000/ready
+
+      - name: Check tasks API endpoint
+        run: |
+          curl -fsS http://localhost:4000/api/tasks
+
+      - name: Show Docker Compose logs on failure
+        if: failure()
+        run: |
+          docker compose \
+            -p "$COMPOSE_PROJECT_NAME" \
+            --env-file .env.compose \
+            ps
+
+          docker compose \
+            -p "$COMPOSE_PROJECT_NAME" \
+            --env-file .env.compose \
+            logs --no-color
+
+      - name: Clean up Docker Compose resources
+        if: always()
+        run: |
+          docker compose \
+            -p "$COMPOSE_PROJECT_NAME" \
+            --env-file .env.compose \
+            down --volumes --remove-orphans
+
+      - name: Configure AWS credentials using GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TASKBOARD_DEV_ECR_PUSH_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: taskboard-dev-ecr-publish
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Tag Docker images for ECR
+        run: |
+          ECR_REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+
+          BACKEND_SHA_IMAGE="$ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:${GITHUB_SHA}"
+          BACKEND_LATEST_IMAGE="$ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:dev-latest"
+
+          FRONTEND_SHA_IMAGE="$ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:${GITHUB_SHA}"
+          FRONTEND_LATEST_IMAGE="$ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:dev-latest"
+
+          docker tag "$BACKEND_LOCAL_IMAGE" "$BACKEND_SHA_IMAGE"
+          docker tag "$BACKEND_LOCAL_IMAGE" "$BACKEND_LATEST_IMAGE"
+
+          docker tag "$FRONTEND_LOCAL_IMAGE" "$FRONTEND_SHA_IMAGE"
+          docker tag "$FRONTEND_LOCAL_IMAGE" "$FRONTEND_LATEST_IMAGE"
+
+          echo "BACKEND_SHA_IMAGE=$BACKEND_SHA_IMAGE" >> "$GITHUB_ENV"
+          echo "BACKEND_LATEST_IMAGE=$BACKEND_LATEST_IMAGE" >> "$GITHUB_ENV"
+          echo "FRONTEND_SHA_IMAGE=$FRONTEND_SHA_IMAGE" >> "$GITHUB_ENV"
+          echo "FRONTEND_LATEST_IMAGE=$FRONTEND_LATEST_IMAGE" >> "$GITHUB_ENV"
+
+      - name: Push backend image to ECR
+        run: |
+          docker push "$BACKEND_SHA_IMAGE"
+          docker push "$BACKEND_LATEST_IMAGE"
+
+      - name: Push frontend image to ECR
+        run: |
+          docker push "$FRONTEND_SHA_IMAGE"
+          docker push "$FRONTEND_LATEST_IMAGE"
