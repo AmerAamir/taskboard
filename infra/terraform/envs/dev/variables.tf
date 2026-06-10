@@ -47,3 +47,28 @@ variable "common_tags" {
   description = "Common AWS tags."
   type        = map(string)
 }
+
+variable "github_owner" {
+  description = "GitHub organization or username."
+  type        = string
+}
+
+variable "github_repository" {
+  description = "GitHub repository name."
+  type        = string
+}
+
+variable "github_subject_claims" {
+  description = "Allowed GitHub OIDC subject claims."
+  type        = list(string)
+}
+
+variable "create_github_oidc_provider" {
+  description = "Whether to create the GitHub Actions OIDC provider."
+  type        = bool
+}
+
+variable "existing_github_oidc_provider_arn" {
+  description = "Existing GitHub Actions OIDC provider ARN if not creating one."
+  type        = string
+}

@@ -19,3 +19,13 @@ common_tags = {
   Owner       = "Amer"
   ManagedBy   = "Terraform"
 }
+
+github_owner      = "AmerAamir"
+github_repository = "taskboard"
+
+github_subject_claims = [
+  "repo:AmerAamir/taskboard:ref:refs/heads/dev"
+]
+
+create_github_oidc_provider      = false
+existing_github_oidc_provider_arn = "arn:aws:iam::631534401204:oidc-provider/token.actions.githubusercontent.com"
