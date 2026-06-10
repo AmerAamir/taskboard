@@ -170,7 +170,4 @@ jobs:
           docker push "$FRONTEND_SHA_IMAGE"
           docker push "$FRONTEND_LATEST_IMAGE"
 
-<<<<<<< HEAD
 # Triggered after reviewed changes are merged into dev.
-=======
->>>>>>> 9d7e6ec (ci: fix compose environment variables)
