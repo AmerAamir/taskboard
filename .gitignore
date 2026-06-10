@@ -1,4 +1,4 @@
-﻿# Dependencies
+# Dependencies
 node_modules/
 
 # Environment files with real secrets
@@ -36,3 +36,8 @@ Thumbs.db
 *.seed
 *.sqlite
 *.db
+
+.env.compose
+
+!.env.compose.example
+
