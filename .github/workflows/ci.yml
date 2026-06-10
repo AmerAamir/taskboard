@@ -37,19 +37,26 @@ jobs:
           PORT=4000
           BACKEND_PORT=4000
 
+          PGUSER=taskboard
+          PGPASSWORD=taskboard_ci_password
+          PGDATABASE=taskboard
+          PGHOST=postgres
+          PGPORT=5432
+
           POSTGRES_USER=taskboard
           POSTGRES_PASSWORD=taskboard_ci_password
           POSTGRES_DB=taskboard
-          POSTGRES_HOST=db
+          POSTGRES_HOST=postgres
           POSTGRES_PORT=5432
 
-          DATABASE_HOST=db
+          DATABASE_HOST=postgres
           DATABASE_PORT=5432
           DATABASE_USER=taskboard
           DATABASE_PASSWORD=taskboard_ci_password
           DATABASE_NAME=taskboard
-          DATABASE_URL=postgresql://taskboard:taskboard_ci_password@db:5432/taskboard
+          DATABASE_URL=postgresql://taskboard:taskboard_ci_password@postgres:5432/taskboard
 
+          ALLOWED_ORIGIN=http://localhost:3000
           VITE_API_URL=http://localhost:4000
           EOF
 
@@ -123,3 +130,4 @@ jobs:
             -p "$COMPOSE_PROJECT_NAME" \
             --env-file .env.compose \
             down --volumes --remove-orphans
+
