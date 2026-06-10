@@ -36,3 +36,7 @@ Thumbs.db
 *.seed
 *.sqlite
 *.db
+
+.env.compose
+
+!.env.compose.example
