@@ -162,3 +162,5 @@ jobs:
         run: |
           docker push "$FRONTEND_SHA_IMAGE"
           docker push "$FRONTEND_LATEST_IMAGE"
+
+# Triggered after reviewed changes are merged into dev.
